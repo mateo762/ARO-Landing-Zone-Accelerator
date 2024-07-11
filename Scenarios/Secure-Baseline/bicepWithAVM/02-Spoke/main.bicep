@@ -7,7 +7,12 @@ targetScope = 'subscription'
 import {
   getResourceName
   getResourceNameFromParentResourceName
+  replaceSubnetNamePlaceholders
 } from '../commonModules/naming/functions.bicep'
+
+import { 
+  subnetConfigType 
+} from '../commonModules/network/types.bicep'
 
 /* -------------------------------------------------------------------------- */
 /*                                 PARAMETERS                                 */
@@ -117,7 +122,8 @@ param jumpboxNetworkSecurityGroupName string = getResourceNameFromParentResource
 
 /* ------------------------------ Other Subnets ----------------------------- */
 
-// TODO add the other subnets and their type
+@description('The configuration for other subnets. Defaults to an empty array.')
+param otherSubnetsConfig subnetConfigType
 
 /* ------------------------------- Route Table ------------------------------ */
 
@@ -159,7 +165,7 @@ var privateEndpointsNsgSecurityRules = loadJsonContent('nsg/private-endpoints-ns
 
 /* --------------------------------- Subnets -------------------------------- */
 
-var subnets = [
+var predefinedSubnets = [
   {
     name: masterNodesSubnetName
     addressPrefix: masterNodesSubnetAddressPrefix
@@ -183,6 +189,14 @@ var subnets = [
     networkSecurityGroupResourceId: jumpboxNetworkSecurityGroup.outputs.resourceId
   }
 ]
+
+
+  var otherSubnets = [for subnet in otherSubnetsConfig.subnets: {
+    name: replaceSubnetNamePlaceholders(subnet.name, workloadName, env)
+    addressPrefix: subnet.addressPrefix
+  }]
+
+var subnets = concat(predefinedSubnets, otherSubnets)
 
 /* ------------------------------- Monitoring ------------------------------- */
 
